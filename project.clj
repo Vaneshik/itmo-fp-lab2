@@ -10,7 +10,5 @@
             [jonase/eastwood "1.4.3"],
             [com.github.clj-kondo/lein-clj-kondo "0.2.5"]]
   :profiles {:uberjar {:aot :all
-                       :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}
-             :test {:injections [(require 'oa-dict.pretty-reporter)
-                                 (require 'oa-dict.assertions)]}})
+                       :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
 
