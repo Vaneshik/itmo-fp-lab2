@@ -3,6 +3,24 @@
 
 (def TABLE_SIZE 32)
 
+;; Протокол Dict определяет основное API структуры данных согласно требованиям лабораторной:
+;;
+;; 1. "необходимо реализовать их вручную" - функции insert, delete, filter-dict,
+;;    map-dict, reduce-left/right, merge-dict, bind-dict реализованы явно для выполнения
+;;    требований ЛР, а не получены автоматически через макросы или наследование
+;;
+;; 2. "API должно быть реализовано для заданного интерфейса и оно не должно протекать" -
+;;    четко определенный интерфейс Dict, который тестируется напрямую без зависимости
+;;    от внутреннего представления (table с открытой адресацией)
+;;
+;; 3. "структура должна быть полиморфной" - протокол позволяет создавать
+;;    альтернативные реализации словаря (например, на базе дерева или других
+;;    хеш-таблиц) с единым интерфейсом
+;;
+;; Стандартные интерфейсы Clojure (ILookup, Associative, Seqable, Counted,
+;; IPersistentCollection, IPersistentMap) реализованы дополнительно для выполнения
+;; требования "по возможности -- обеспечить совместимость" с экосистемой языка.
+;; Это позволяет использовать OADict с функциями get, assoc, seq, count и др.
 (defprotocol Dict
   (insert [dict key value])
   (insert-all [dict pairs])
@@ -17,9 +35,14 @@
   (reduce-left [dict f init])
   (reduce-right [dict f init])
   (equals-dict? [dict1 dict2])
-  (merge-dict [dict1 dict2]))
+  (merge-dict [dict1 dict2])
+  (bind-dict [dict f]))
 
-(defn my-reduce-right [f init coll]
+(defn my-reduce-right
+  "Правая свёртка коллекции.
+  Применяет функцию f справа налево: f(f(f(init, last), ...), first).
+  В отличие от стандартного reduce в Clojure, который работает только слева."
+  [f init coll]
   (if (empty? coll)
     init
     (f (my-reduce-right f init (rest coll)) (first coll))))
@@ -131,6 +154,12 @@
     (->> (get-pairs dict2)
          (insert-all dict1)))
 
+  (bind-dict [this f]
+    (reduce-left this
+                 (fn [acc-dict [k v]]
+                   (merge-dict acc-dict (f k v)))
+                 (OADict. (vec (repeat TABLE_SIZE nil)))))
+
   clojure.lang.ILookup
   (valAt [dict k] (get-value dict k))
   (valAt [dict k not-found]
@@ -170,10 +199,16 @@
       (map? other) (= (into {} (seq this)) other)
       :else false)))
 
-(defn empty-dict []
+(defn empty-dict
+  "Создает пустой словарь с открытой адресацией.
+  Возвращает новый экземпляр OADict с таблицей из TABLE_SIZE (32) пустых ячеек."
+  []
   (OADict. (vec (repeat TABLE_SIZE nil))))
 
-(defn dict-from [pairs]
+(defn dict-from
+  "Создает словарь из последовательности пар [key value].
+  Пример: (dict-from [[:a 1] [:b 2] [:c 3]])"
+  [pairs]
   (-> (empty-dict)
       (insert-all pairs)))
 

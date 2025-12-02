@@ -192,3 +192,66 @@
       (is (= 1 (get d2 :a)))
       (is (= 2 (get d2 :b))))))
 
+(deftest bind-operation-test
+  (testing "bind на пустом словаре"
+    (let [result (dict/bind-dict (dict/empty-dict)
+                                 (fn [k v] (dict/insert (dict/empty-dict) k (* v 2))))]
+      (is (= 0 (count result)))))
+
+  (testing "bind с функцией, возвращающей пустой словарь"
+    (let [d (-> (dict/empty-dict)
+                (dict/insert :a 1)
+                (dict/insert :b 2))
+          result (dict/bind-dict d (fn [_ _] (dict/empty-dict)))]
+      (is (= 0 (count result)))))
+
+  (testing "bind с функцией, создающей новые пары"
+    (let [d (-> (dict/empty-dict)
+                (dict/insert :a 1)
+                (dict/insert :b 2))
+          result (dict/bind-dict d
+                                 (fn [k v]
+                                   (-> (dict/empty-dict)
+                                       (dict/insert k v)
+                                       (dict/insert (keyword (str (name k) "-doubled")) (* v 2)))))]
+      (is (= 1 (dict/get-value result :a)))
+      (is (= 2 (dict/get-value result :a-doubled)))
+      (is (= 2 (dict/get-value result :b)))
+      (is (= 4 (dict/get-value result :b-doubled)))))
+
+  (testing "bind объединяет результаты через merge"
+    (let [d (-> (dict/empty-dict)
+                (dict/insert :x 10))
+          result (dict/bind-dict d
+                                 (fn [k v]
+                                   (-> (dict/empty-dict)
+                                       (dict/insert :result v)
+                                       (dict/insert :original k))))]
+      (is (= 10 (dict/get-value result :result)))
+      (is (= :x (dict/get-value result :original))))))
+
+(deftest bind-monad-laws-test
+  (testing "Левая идентичность монады: bind(return(x), f) = f(x)"
+    (let [x 42
+          f (fn [_ v] (dict/insert (dict/empty-dict) :result (* v 2)))
+          d (dict/insert (dict/empty-dict) :test x)
+          left (dict/bind-dict d f)
+          right (f :test x)]
+      (is (dict/equals-dict? left right))))
+
+  (testing "Правая идентичность монады: bind(m, return) = m"
+    (let [m (-> (dict/empty-dict)
+                (dict/insert :a 1)
+                (dict/insert :b 2))
+          result (dict/bind-dict m (fn [k v] (dict/insert (dict/empty-dict) k v)))]
+      (is (dict/equals-dict? m result))))
+
+  (testing "Ассоциативность монады: bind(bind(m, f), g) = bind(m, λx.bind(f(x), g))"
+    (let [m (-> (dict/empty-dict)
+                (dict/insert :x 5))
+          f (fn [k v] (dict/insert (dict/empty-dict) k (* v 2)))
+          g (fn [k v] (dict/insert (dict/empty-dict) k (+ v 10)))
+          left (dict/bind-dict (dict/bind-dict m f) g)
+          right (dict/bind-dict m (fn [k v] (dict/bind-dict (f k v) g)))]
+      (is (dict/equals-dict? left right)))))
+
