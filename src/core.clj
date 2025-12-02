@@ -96,12 +96,12 @@
   (get-pairs [_]
     (filter vector? table))
 
-  (delete [_ key]
+  (delete [this key]
     (let [idx (mod (hash key) (count table))
           slot-idx (search-key table key idx)]
       (if slot-idx
         (OADict. (assoc table slot-idx :deleted))
-        (OADict. table))))
+        this)))
 
   (filter-dict [this pred]
     (->> (get-pairs this)
@@ -143,8 +143,9 @@
   (valAt [dict k]
     (get-value dict k))
   (valAt [dict k not-found]
-    (let [v (get-value dict k)]
-      (if (nil? v) not-found v)))
+    (if (contains-key? dict k)
+      (get-value dict k)
+      not-found))
 
   clojure.lang.Associative
   (assoc [dict k v]
