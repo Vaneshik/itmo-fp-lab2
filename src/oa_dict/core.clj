@@ -63,7 +63,7 @@
 (deftype OADict [table]
   Dict
 
-  (insert [dict key value]
+  (insert [_ key value]
     (let [idx (mod (hash key) (count table))
           slot-idx (locate-empty-cell table key idx)]
       (if slot-idx
@@ -73,7 +73,7 @@
   (insert-all [dict pairs]
     (reduce (fn ins [d [k v]] (insert d k v)) dict pairs))
 
-  (get-value [dict key]
+  (get-value [_ key]
     (let [idx (mod (hash key) (count table))
           slot-idx (search-key table key idx)]
       (when slot-idx
@@ -81,7 +81,7 @@
           (when (vector? slot)
             (second slot))))))
 
-  (contains-key? [dict key]
+  (contains-key? [_ key]
     (let [idx (mod (hash key) (count table))
           slot-idx (search-key table key idx)]
       (boolean slot-idx)))
@@ -92,7 +92,7 @@
   (get-values [dict]
     (map second (get-pairs dict)))
 
-  (get-pairs [dict]
+  (get-pairs [_]
     (filter vector? table))
 
   (delete [dict key]
@@ -152,7 +152,7 @@
               (get-pairs dict))))
 
   clojure.lang.Counted
-  (count [dict]
+  (count [_]
     (count (filter vector? table)))
 
   clojure.lang.IPersistentCollection
