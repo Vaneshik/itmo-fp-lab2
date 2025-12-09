@@ -122,11 +122,14 @@
          (my-reduce-right f init)))
 
   (equals-dict? [dict1 dict2]
-    (let [p1 (get-pairs dict1)
-          p2 (get-pairs dict2)]
+    (let [pairs1 (get-pairs dict1)
+          pairs2 (get-pairs dict2)]
       (and
-       (reduce (fn f [acc [k v]] (and acc (= (get-value dict1 k) v))) true p2)
-       (reduce (fn f [acc [k v]] (and acc (= (get-value dict2 k) v))) true p1))))
+       (= (count pairs1) (count pairs2))
+       (every? (fn [[k v]]
+                 (and (contains-key? dict2 k)
+                      (= v (get-value dict2 k))))
+               pairs1))))
 
   (merge-dict [dict1 dict2]
     (->> (get-pairs dict2)
